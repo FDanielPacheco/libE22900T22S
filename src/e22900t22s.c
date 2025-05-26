@@ -455,9 +455,8 @@ e22900t22s_get_config( e22900t22s_t * dev ){
   }
   serial_flush( &dev->serial->sr );
   
-       cfglen = 3 + 1 + (E22900T22S_MEM_PID + E22900T22S_PID_SIZE);
-  //  Overhead_/   /                        \_ Last memory address
-  //  Mem Index 0_/
+       cfglen = 3 + E22900T22S_PID_SIZE;
+  //  Overhead_/             \_ Last memory address
 
   len = (uint8_t) serial_read( (char *) cfg, sizeof(cfg), 0, cfglen , &dev->serial->sr );
   if( len != cfglen ){
@@ -507,8 +506,8 @@ e22900t22s_set_mode( const e22900t22s_mode_t mode , e22900t22s_t * dev ){
       break;
 
     case E22900T22S_MODE_CONFIG:
-      ret = gpiod_digital_write( &dev->gpio.m0, 1 );
-      ret = gpiod_digital_write( &dev->gpio.m1, 0 );
+      ret = gpiod_digital_write( &dev->gpio.m0, 0 );
+      ret = gpiod_digital_write( &dev->gpio.m1, 1 );
       break;
 
     case E22900T22S_MODE_SLEEP:
@@ -627,12 +626,12 @@ e22900t22s_gpio_init( const char * chip_name, uint8_t m0, uint8_t m1, uint8_t au
     return -1;
   }
   dev->gpio.m1.offset = m1;
-  if( -1 == gpiod_pin_mode( &dev->gpio.chip, &dev->gpio.m0, 1 ) ){
+  if( -1 == gpiod_pin_mode( &dev->gpio.chip, &dev->gpio.m1, 1 ) ){
     perror("gpiod_pin_mode(m1)");
     return -1;
   }
   dev->gpio.aux.offset = aux;
-  if( -1 == gpiod_pin_mode( &dev->gpio.chip, &dev->gpio.m0, 0 ) ){
+  if( -1 == gpiod_pin_mode( &dev->gpio.chip, &dev->gpio.aux, 0 ) ){
     perror("gpiod_pin_mode(aux)");
     return -1;
   }
@@ -685,9 +684,9 @@ e22900t22s_print_config( uint8_t console, e22900t22s_t * dev ){
     "Listen before talk: %s\n"
     "WOR: %s\n"
     "WOR cycle (ms): %s\n"
-    "Connected to %s\n"
-    "M0: %d\n"
-    "M1: %d\n"
+    "Connected to %s: "
+    "M0: %d, "
+    "M1: %d, "
     "AUX: %d\n",
     cfg->pid[0], cfg->pid[1], cfg->pid[2], cfg->pid[3], cfg->pid[4], cfg->pid[5], cfg->pid[6],
     cfg->address, cfg->netid,

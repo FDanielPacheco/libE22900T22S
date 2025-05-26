@@ -3,9 +3,9 @@
 #include <time.h>
 
 #define CHIPN  "gpiochip0"
-#define M0     17
-#define M1     27
 #define AUX    4
+#define M0     5
+#define M1     6
 
 e22900t22s_t driver;
 
@@ -49,7 +49,7 @@ int dsetup( serial_manager_t * serial ){
     return -1;
   }
 
-  (void) e22900t22s_print_config( 1, &driver );
+  // (void) e22900t22s_print_config( 1, &driver );
 
   // Configurations
   e22900t22s_set_rssi( 0, &driver );
@@ -63,6 +63,7 @@ int dsetup( serial_manager_t * serial ){
   }
 
   (void) e22900t22s_print_config( 1, &driver );
+  printf("[%d] Device configured...\n", getpid( ) );
   return 0; 
 }
  

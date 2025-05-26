@@ -1,9 +1,9 @@
-CC = gcc
+CC = clang
 
 CFLAGS = -std=gnu99 -I/usr/local/include/ -I../include
 CFLAGS += -Wall -Wextra -Wpedantic -Wshadow -Wconversion -g -Iinclude -fPIC
 LD_FLAGS = -shared
-LD_FLAGS += -lc -lpthread -lrt -lm -lserialposix -lxml2
+LD_FLAGS += -lc -lpthread -lrt -lm -lserialposix -lxml2 -lgpiod
 
 .PHONY: new compile clean
 
@@ -49,3 +49,7 @@ build/lib$(name).so: $(patsubst src/%.c, build/%.o, $(wildcard src/*.c) )
 
 compile: build/lib$(name).so
 	@echo "Done creating the shared library $<!"
+
+clean:
+	@echo "Removing the build directory from the library..."
+	@rm -rf ./build
