@@ -394,8 +394,10 @@ e22900t22s_update_eeprom( e22900t22s_t * dev ){
     perror("serial_read - not same size");
     return -1;
   }
-
-  if( 0 != memcmp( ret, cfg, len ) ){
+ 
+  //                      __ Since first byte changes from C0 to C1
+  //                     /
+  if( 0 != memcmp( &ret[1], &cfg[1], len ) ){
     perror("serial_read - not match words");
     return -1;
   }
