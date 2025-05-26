@@ -463,7 +463,6 @@ e22900t22s_get_config( e22900t22s_t * dev ){
   dev->cfg.wor = (cfg[ 3 + E22900T22S_MEM_REG3 ] >> E22900T22S_SHF_WOR) & 1;
   dev->cfg.wor_cycle = (cfg[ 3 + E22900T22S_SHF_WORCYC ] >> E22900T22S_SHF_WOR) & (E22900T22S_LUT_SIZE_WORCYCLE - 1);
 
-  int8_t aux;
   while( !( aux = gpiod_digital_read( &dev->gpio.aux ) ) ){
     if( -1 == aux ){
       perror("gpiod_digital_read");
