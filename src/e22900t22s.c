@@ -374,6 +374,15 @@ e22900t22s_update_eeprom( e22900t22s_t * dev ){
   //     Overhead_/   /              \_ Last memory address
   //     Mem Index 0_/
 
+  uint8_t aux;
+  while( !( aux = gpiod_digital_read( &dev->gpio.aux ) ) ){
+    if( -1 == aux ){
+      perror("gpiod_digital_read");
+      return -1;    
+    }
+    usleep( 10 );
+  }
+
   if( !serial_write( &dev->serial->sr, cfg, cfglen ) ){
     perror("serial_write");
     return -1;
@@ -407,6 +416,15 @@ e22900t22s_get_config( e22900t22s_t * dev ){
   if( -1 == e22900t22s_set_mode( E22900T22S_MODE_CONFIG, dev ) ){
     perror("e22900t22s_set_mode");
     return -1;
+  }
+  
+  uint8_t aux;
+  while( !( aux = gpiod_digital_read( &dev->gpio.aux ) ) ){
+    if( -1 == aux ){
+      perror("gpiod_digital_read");
+      return -1;    
+    }
+    usleep( 10 );
   }
 
   // Overhead - Read Configuration memory block
@@ -444,6 +462,15 @@ e22900t22s_get_config( e22900t22s_t * dev ){
   dev->cfg.lbt = (cfg[ 3 + E22900T22S_MEM_REG3 ] >> E22900T22S_SHF_LBT) & 1;
   dev->cfg.wor = (cfg[ 3 + E22900T22S_MEM_REG3 ] >> E22900T22S_SHF_WOR) & 1;
   dev->cfg.wor_cycle = (cfg[ 3 + E22900T22S_SHF_WORCYC ] >> E22900T22S_SHF_WOR) & (E22900T22S_LUT_SIZE_WORCYCLE - 1);
+
+  uint8_t aux;
+  while( !( aux = gpiod_digital_read( &dev->gpio.aux ) ) ){
+    if( -1 == aux ){
+      perror("gpiod_digital_read");
+      return -1;    
+    }
+    usleep( 10 );
+  }
 
   // Overhead - Read PID
   cfg[ 0 ] = E22900T22S_READ_REG;          // Command  
@@ -529,7 +556,7 @@ e22900t22s_set_mode( const e22900t22s_mode_t mode , e22900t22s_t * dev ){
   else{
     serial_set_baudrate( B9600, &dev->serial->sr );
     serial_set_parity( BPARITY_NONE, &dev->serial->sr );
-    serial_set_rule( 1, 0, &dev->serial->sr );
+    serial_set_rule( 50, 0, &dev->serial->sr );
   }
   
   // Recomendation by the datasheet
