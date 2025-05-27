@@ -2,10 +2,22 @@
 #include <e22900t22s.h>
 #include <time.h>
 
-#define CHIPN  "gpiochip0"
-#define AUX    4
-#define M0     5
-#define M1     6
+#ifdef RPI4
+  #define CHIPN  "gpiochip0"
+  #define AUX    4
+  #define M0     5
+  #define M1     6
+#elif XU4
+  #define CHIPN  "gpiochip0"
+  #define AUX    7
+  #define M0     2
+  #define M1     3
+#else
+  #define CHIPN  ""
+  #define AUX    0
+  #define M0     0
+  #define M1     0
+#endif
 
 e22900t22s_t driver;
 
