@@ -696,42 +696,43 @@ e22900t22s_print_config( uint8_t console, e22900t22s_t * dev ){
   e22900t22s_pinmode_t * pin = &dev->gpio; 
 
   snprintf( message, 1024, 
-    "Product information: %02X-%02X-%02X-%02X-%02X-%02X-%02X\n"
-    "Module address: %hd\n"
-    "Network identification: %hhd\n"
-    "Baud rate (bps): %s\n"
-    "Air data rate (bps): %s\n"
-    "Parity bit: %s\n"
-    "Packet size (B): %s\n"
-    "Transmission power (dBm): %s\n"
-    "Channel: %d\n"
-    "Ambient noise: %s\n"
-    "RSSI byte: %s\n"
-    "Fixed point: %s\n"
-    "Repeater: %s\n"
-    "Listen before talk: %s\n"
-    "WOR: %s\n"
-    "WOR cycle (ms): %s\n"
-    "Connected to %s: "
+    "[%d] Product information: %02X-%02X-%02X-%02X-%02X-%02X-%02X\n"
+    "[%d] Module address: %hd\n"
+    "[%d] Network identification: %hhd\n"
+    "[%d] Baud rate (bps): %s\n"
+    "[%d] Air data rate (bps): %s\n"
+    "[%d] Parity bit: %s\n"
+    "[%d] Packet size (B): %s\n"
+    "[%d] Transmission power (dBm): %s\n"
+    "[%d] Channel: %d\n"
+    "[%d] Ambient noise: %s\n"
+    "[%d] RSSI byte: %s\n"
+    "[%d] Fixed point: %s\n"
+    "[%d] Repeater: %s\n"
+    "[%d] Listen before talk: %s\n"
+    "[%d] WOR: %s\n"
+    "[%d] WOR cycle (ms): %s\n"
+    "[%d] Connected to %s: "
     "M0: %d, "
     "M1: %d, "
     "AUX: %d\n",
-    cfg->pid[0], cfg->pid[1], cfg->pid[2], cfg->pid[3], cfg->pid[4], cfg->pid[5], cfg->pid[6],
-    cfg->address, cfg->netid,
-    lookup_table_baudrate_2text( cfg->baudrate ),
-    lookup_table_airrate_2text( cfg->airrate ),
-    lookup_table_parity_2text( cfg->parity ),
-    lookup_table_packet_2text( cfg->packet_size ),
-    lookup_table_power_2text( cfg->transmit_power ),
-    cfg->channel,
-    cfg->ambient_noise ? "enabled" : "disabled",
-    cfg->rssi ? "enabled" : "disabled",
-    cfg->fixed ? "enabled" : "disabled",
-    cfg->repeater ? "enabled" : "disabled",
-    cfg->lbt ? "enabled" : "disabled",
-    cfg->wor ? "enabled" : "disabled",
-    lookup_table_worcycle_2text( cfg->wor_cycle ),
-    pin->chip.name, pin->m0.offset, pin->m1.offset, pin->aux.offset
+    getpid( ), cfg->pid[0], cfg->pid[1], cfg->pid[2], cfg->pid[3], cfg->pid[4], cfg->pid[5], cfg->pid[6],
+    getpid( ), cfg->address, 
+    getpid( ), cfg->netid,
+    getpid( ), lookup_table_baudrate_2text( cfg->baudrate ),
+    getpid( ), lookup_table_airrate_2text( cfg->airrate ),
+    getpid( ), lookup_table_parity_2text( cfg->parity ),
+    getpid( ), lookup_table_packet_2text( cfg->packet_size ),
+    getpid( ), lookup_table_power_2text( cfg->transmit_power ),
+    getpid( ), cfg->channel,
+    getpid( ), cfg->ambient_noise ? "enabled" : "disabled",
+    getpid( ), cfg->rssi ? "enabled" : "disabled",
+    getpid( ), cfg->fixed ? "enabled" : "disabled",
+    getpid( ), cfg->repeater ? "enabled" : "disabled",
+    getpid( ), cfg->lbt ? "enabled" : "disabled",
+    getpid( ), cfg->wor ? "enabled" : "disabled",
+    getpid( ), lookup_table_worcycle_2text( cfg->wor_cycle ),
+    getpid( ), pin->chip.name, pin->m0.offset, pin->m1.offset, pin->aux.offset
   );
   
   if( console )
