@@ -5,8 +5,8 @@
 #ifdef RPI4
   #define CHIPN  "gpiochip0"
   #define AUX    4
-  #define M0     5
-  #define M1     6
+  #define M0     22
+  #define M1     27
 #elif XU4
   #define CHIPN  "gpiochip0"
   #define AUX    7
