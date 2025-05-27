@@ -66,8 +66,8 @@ int dsetup( serial_manager_t * serial ){
   // Configurations
   e22900t22s_set_rssi( 0, &driver );
   e22900t22s_set_packet_size( E22900T22S_PACKET_32, &driver );
-  e22900t22s_set_airrate( B62500, &driver );
-  e22900t22s_set_baudrate( B57600, &driver );
+  e22900t22s_set_airrate( B38400, &driver );
+  e22900t22s_set_baudrate( B38400, &driver );
   ret = e22900t22s_update_eeprom( &driver );
   if( -1 == ret ){
     e22900t22s_gpio_close( &driver );
