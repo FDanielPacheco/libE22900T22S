@@ -8,10 +8,10 @@
   #define M0     22
   #define M1     27
 #elif XU4
-  #define CHIPN  "gpiochip0"
-  #define AUX    7
-  #define M0     2
-  #define M1     3
+  #define CHIPN  "gpiochip2"
+  #define AUX    2
+  #define M0     6
+  #define M1     5
 #else
   #define CHIPN  ""
   #define AUX    0
