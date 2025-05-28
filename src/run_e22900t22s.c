@@ -76,6 +76,12 @@ int dsetup( serial_manager_t * serial ){
     return -1;
   }
 
+  ret = e22900t22s_get_config( &driver );
+  if( -1 == ret ){
+    e22900t22s_gpio_close( &driver );
+    return -1;
+  }
+
   (void) e22900t22s_print_config( 1, &driver );
   printf("[%d] Device configured...\n", getpid( ) );
   return 0; 
