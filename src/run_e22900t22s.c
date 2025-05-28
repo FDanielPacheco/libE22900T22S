@@ -36,11 +36,11 @@ printPacket( const uint8_t * pk, const size_t len, const char * cover, int colum
   printf("<-----%s Packet [%s]----->\n", cover, tm );
   for( size_t i = 0 ; i < len ; ++i ){
     if( !cont || (i + 1 == len) ){
-      printf( "%04ld:%02X\n", i, pk[i] );
+      printf( "%04zu:%02X\n", i, pk[i] );
       cont = columnsize;
     }
     else {
-      printf( "%04ld:%02X ", i, pk[i] );
+      printf( "%04zu:%02X ", i, pk[i] );
       cont--;
     }
   }
@@ -64,11 +64,12 @@ int dsetup( serial_manager_t * serial ){
   // (void) e22900t22s_print_config( 1, &driver );
 
   // Configurations
-  e22900t22s_set_rssi( 0, &driver );
-  e22900t22s_set_packet_size( E22900T22S_PACKET_32, &driver );
-  e22900t22s_set_airrate( B38400, &driver );
+  e22900t22s_default_config( 0, &driver );
   e22900t22s_set_baudrate( B38400, &driver );
+  e22900t22s_set_airrate( B38400, &driver );
+  e22900t22s_set_packet_size( E22900T22S_PACKET_32, &driver );
   e22900t22s_set_listen_before_talk( 1, &driver );
+
   ret = e22900t22s_update_eeprom( &driver );
   if( -1 == ret ){
     e22900t22s_gpio_close( &driver );

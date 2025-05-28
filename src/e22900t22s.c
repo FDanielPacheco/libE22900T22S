@@ -354,9 +354,9 @@ e22900t22s_update_eeprom( e22900t22s_t * dev ){
   cfg[ 3 + E22900T22S_MEM_ADDH ] = (uint8_t) (dev->cfg.address >> 7) & 0xFF;
   cfg[ 3 + E22900T22S_MEM_ADDL ] = (uint8_t) dev->cfg.address & 0xFF ;
   cfg[ 3 + E22900T22S_MEM_NETID ] = dev->cfg.netid ;
-  cfg[ 3 + E22900T22S_MEM_REG0 ] = lookup_table_baudrate_2bin( dev->cfg.baudrate ) << E22900T22S_SHF_UART |
+  cfg[ 3 + E22900T22S_MEM_REG0 ] = (uint8_t) (lookup_table_baudrate_2bin( dev->cfg.baudrate ) << E22900T22S_SHF_UART |
                                    lookup_table_parity_2bin( dev->cfg.parity ) << E22900T22S_SHF_PARITY |
-                                   lookup_table_airrate_2bin( dev->cfg.airrate ) << E22900T22S_SHF_AIRDATA;
+                                   lookup_table_airrate_2bin( dev->cfg.airrate ) << E22900T22S_SHF_AIRDATA);
   cfg[ 3 + E22900T22S_MEM_REG1 ] = (uint8_t) ( dev->cfg.packet_size << E22900T22S_SHF_PKTSZ |
                                    dev->cfg.ambient_noise << E22900T22S_SHF_AMBNS | 
                                    dev->cfg.transmit_power << E22900T22S_SHF_POWER );
@@ -449,7 +449,7 @@ e22900t22s_get_config( e22900t22s_t * dev ){
     return -1;
   }
 
-  dev->cfg.address = (uint16_t) cfg[ 3 + E22900T22S_MEM_ADDH ] << 8 | cfg[ 3 + E22900T22S_MEM_ADDL ];
+  dev->cfg.address = (uint16_t) (cfg[ 3 + E22900T22S_MEM_ADDH ] << 8 | cfg[ 3 + E22900T22S_MEM_ADDL ]);
   dev->cfg.netid = cfg[ 3 + E22900T22S_MEM_NETID ];
   dev->cfg.baudrate = lookup_table_baudrate_2code( (cfg[ 3 + E22900T22S_MEM_REG0 ] >> E22900T22S_SHF_UART) & (E22900T22S_LUT_SIZE_UART - 1) );
   dev->cfg.parity = lookup_table_parity_2code( (cfg[ 3 + E22900T22S_MEM_REG0 ] >> E22900T22S_SHF_PARITY) & (E22900T22S_LUT_SIZE_PARITY - 1) );
