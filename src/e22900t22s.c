@@ -3,7 +3,7 @@
  **************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
 
 /**********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************//**
- * @file      E22900T22S.c
+ * @file      e22900t22s.c
  * 
  * @version   1.0
  *
@@ -40,18 +40,26 @@ int8_t check( e22900t22s_t * dev );
 uint8_t lookup_table_baudrate_2bin( const baudRate_t baud_code );
 const char * lookup_table_baudrate_2text( const baudRate_t baud_code );
 baudRate_t lookup_table_baudrate_2code( const uint8_t baud_bin );
+baudRate_t lookup_table_baudrate_fromtext_2code( const char * baud_text );
 
 uint8_t lookup_table_parity_2bin( const parity_t parity_code );
 const char * lookup_table_parity_2text( const parity_t parity_code );
 parity_t lookup_table_parity_2code( const uint8_t parity_bin );
+parity_t lookup_table_parity_fromtext_2code( const char * parity_text );
 
 uint8_t lookup_table_airrate_2bin( const baudRate_t baud_code );
 const char * lookup_table_airrate_2text( const baudRate_t baud_code );
 baudRate_t lookup_table_airrate_2code( const uint8_t baud_bin );
+baudRate_t lookup_table_airrate_fromtext_2code( const char * baud_text );
 
 const char * lookup_table_packet_2text( const e22900t22s_packet_size_t code );
+e22900t22s_packet_size_t lookup_table_packet_fromtext( const char * size_text );
+
 const char * lookup_table_power_2text( const e22900t22s_transmission_power_t code );
+e22900t22s_transmission_power_t lookup_table_power_fromtext( const char * power_text );
+
 const char * lookup_table_worcycle_2text( const e22900t22s_wor_cycle_t code );
+e22900t22s_wor_cycle_t lookup_table_worcycle_fromtext( const char * cycle_text );
 
 int8_t gpiod_init( const char * name, gpiod_chip2_t * chip );
 int8_t gpiod_pin_mode( gpiod_chip2_t * chip, gpiod_line2_t * gpio, uint8_t direction );
@@ -207,6 +215,240 @@ e22900t22s_set_config( const e22900t22s_eeprom_t * config, const uint8_t update,
 
 /***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
 int8_t 
+e22900t22s_set_pinout( const e22900t22s_pinmode_t * pinout, e22900t22s_t * dev ){
+  if( !pinout || !dev ){
+    errno = EINVAL;
+    return -1;
+  }
+  return e22900t22s_gpio_init( pinout->chip.name, pinout->m0.offset, pinout->m1.offset, pinout->aux.offset, dev );
+}
+
+/***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+int8_t 
+e22900t22s_load_config( const char * filename, e22900t22s_eeprom_t * config, e22900t22s_pinmode_t * pinout ){
+  if( !pinout || !config || !filename ){
+    errno = EINVAL;
+    return -1;
+  }
+  
+  xmlDoc * docfile = xmlReadFile( filename, NULL, 0 );
+  if( !docfile ){
+    errno = EINVAL;
+    perror("xmlReadFile");
+    return -1;
+  }
+  
+  xmlNode * root_element = xmlDocGetRootElement(docfile);
+  if( !root_element ){
+    errno = EINVAL;
+    perror("xmlDocGetRootElement");
+    xmlFreeDoc( docfile );
+    return -1;
+  }
+
+  memset( config, 0, sizeof(e22900t22s_eeprom_t) );
+  memset( pinout, 0, sizeof(e22900t22s_pinmode_t) );
+
+  xmlNode * address = NULL;
+  xmlNode * network = NULL;
+  xmlNode * serial = NULL;
+  xmlNode * rf = NULL;
+  xmlNode * pin = NULL;
+
+  if( !strcmp( (char *) root_element->name, "e22900t22s" ) ){
+    for( xmlNode * current_node = root_element->children ; current_node != NULL ; current_node = current_node->next ){
+      if( XML_ELEMENT_NODE == current_node->type ){
+        if( !strcmp( (char *) current_node->name, "address" ) )
+          address = current_node;
+        if( !strcmp( (char *) current_node->name, "network" ) )
+          network = current_node;
+        if( !strcmp( (char *) current_node->name, "serial" ) )
+          serial = current_node;
+        if( !strcmp( (char *) current_node->name, "rf" ) )
+          rf = current_node;        
+        if( !strcmp( (char *) current_node->name, "pin" ) )
+          pin = current_node;        
+      }        
+    }
+  }  
+    
+  if( NULL != address )
+    config->address = (uint16_t) atoi( (const char *) xmlNodeGetContent( address ) );
+
+  if( NULL != network ){
+    xmlNode * id = NULL;
+    xmlNode * key = NULL;
+
+    for( xmlNode * current_node = network->children ; current_node != NULL ; current_node = current_node->next ){
+      if( XML_ELEMENT_NODE == current_node->type ){
+        if( !strcmp( (char *) current_node->name, "id" ) )
+          id = current_node;        
+        if( !strcmp( (char *) current_node->name, "key" ) )
+          key = current_node;        
+      }
+    }
+
+    if( NULL != id )
+      config->netid = (uint8_t) atoi( (const char *) xmlNodeGetContent( id ) );
+    if( NULL != key )
+      config->encryption = (uint16_t) atoi( (const char *) xmlNodeGetContent( key ) );
+  }
+
+  if( NULL != serial ){
+    xmlNode * baudrate;
+    xmlNode * parity;
+
+    for( xmlNode * current_node = serial->children ; current_node != NULL ; current_node = current_node->next ){
+      if( XML_ELEMENT_NODE == current_node->type ){
+        if( !strcmp( (char *) current_node->name, "baudrate" ) )
+          baudrate = current_node;        
+        if( !strcmp( (char *) current_node->name, "parity" ) )
+          parity = current_node;        
+      }
+    }    
+
+    if( NULL != baudrate )
+      config->baudrate = lookup_table_baudrate_fromtext_2code( (const char *) xmlNodeGetContent( baudrate ) );
+    if( NULL != parity )
+      config->parity = lookup_table_baudrate_fromtext_2code( (const char *) xmlNodeGetContent( parity ) );    
+  }
+
+  if( NULL != rf ){
+    xmlNode * baudrate = NULL;
+    xmlNode * size = NULL;
+    xmlNode * power = NULL;
+    xmlNode * channel = NULL;
+    xmlNode * modes = NULL;
+    xmlNode * stats = NULL;
+
+    for( xmlNode * current_node = rf->children ; current_node != NULL ; current_node = current_node->next ){
+      if( XML_ELEMENT_NODE == current_node->type ){
+        if( !strcmp( (char *) current_node->name, "baudrate" ) )
+          baudrate = current_node;        
+        if( !strcmp( (char *) current_node->name, "size" ) )
+          size = current_node;        
+        if( !strcmp( (char *) current_node->name, "power" ) )
+          power = current_node;        
+        if( !strcmp( (char *) current_node->name, "channel" ) )
+          channel = current_node;        
+        if( !strcmp( (char *) current_node->name, "modes" ) )
+          modes = current_node;        
+        if( !strcmp( (char *) current_node->name, "stats" ) )
+          stats = current_node;        
+      }
+    }
+
+    if( !baudrate )
+      config->airrate = lookup_table_airrate_fromtext_2code( (const char *) xmlNodeGetContent( baudrate ) );
+    if( !size )
+      config->packet_size = lookup_table_packet_fromtext( (const char *) xmlNodeGetContent( size ) );
+    if( !power )
+      config->transmit_power = lookup_table_power_fromtext( (const char *) xmlNodeGetContent( power ) );
+    if( !channel )
+      config->channel = (uint8_t) atoi( (const char *) xmlNodeGetContent( channel ) );
+
+    if( !modes ){
+      xmlNode * fixed = NULL;
+      xmlNode * repeater = NULL;
+      xmlNode * lbt = NULL;
+      xmlNode * wor = NULL;
+
+      for( xmlNode * current_node = modes->children ; current_node != NULL ; current_node = current_node->next ){
+        if( XML_ELEMENT_NODE == current_node->type ){
+          if( !strcmp( (char *) current_node->name, "fixed" ) )
+            fixed = current_node;        
+          if( !strcmp( (char *) current_node->name, "repeater" ) )
+            repeater = current_node;        
+          if( !strcmp( (char *) current_node->name, "lbt" ) )
+            lbt = current_node;        
+          if( !strcmp( (char *) current_node->name, "wor" ) )
+            wor = current_node;        
+        }
+      }
+
+      if( !fixed )
+        config->fixed = !atoi( (const char *) xmlNodeGetContent( fixed ) ) ? 0 : 1;
+      if( !repeater )
+        config->repeater = !atoi( (const char *) xmlNodeGetContent( repeater ) ) ? 0 : 1;
+      if( !lbt )
+        config->lbt = !atoi( (const char *) xmlNodeGetContent( lbt ) ) ? 0 : 1;
+
+      if( !wor ){
+        xmlNode * state;
+        xmlNode * cycle;
+
+        for( xmlNode * current_node = wor->children ; current_node != NULL ; current_node = current_node->next ){
+          if( XML_ELEMENT_NODE == current_node->type ){
+            if( !strcmp( (char *) current_node->name, "state" ) )
+              state = current_node;        
+            if( !strcmp( (char *) current_node->name, "cycle" ) )
+              cycle = current_node;        
+          }
+        }
+
+        if( !state )
+          config->wor = !atoi( (const char *) xmlNodeGetContent( state ) ) ? 0 : 1;
+        if( !cycle )
+          config->wor_cycle = lookup_table_worcycle_fromtext( (const char *) xmlNodeGetContent( cycle ) );
+      }
+    }
+
+    if( !stats ){
+      xmlNode * rssi;
+      xmlNode * noise;
+
+      for( xmlNode * current_node = stats->children ; current_node != NULL ; current_node = current_node->next ){
+        if( XML_ELEMENT_NODE == current_node->type ){
+          if( !strcmp( (char *) current_node->name, "rssi" ) )
+            rssi = current_node;        
+          if( !strcmp( (char *) current_node->name, "noise" ) )
+            noise = current_node;        
+        }
+      }
+
+      if( !rssi )
+        config->rssi = !atoi( (const char *) xmlNodeGetContent( rssi ) ) ? 0 : 1;
+      if( !noise )
+        config->ambient_noise = !atoi( (const char *) xmlNodeGetContent( noise ) ) ? 0 : 1;
+    }
+  }
+
+  if( !pin ){
+    xmlNode * chip;
+    xmlNode * aux;
+    xmlNode * m0;
+    xmlNode * m1;
+
+    for( xmlNode * current_node = pin->children ; current_node != NULL ; current_node = current_node->next ){
+      if( XML_ELEMENT_NODE == current_node->type ){
+        if( !strcmp( (char *) current_node->name, "chip" ) )
+          chip = current_node;        
+        if( !strcmp( (char *) current_node->name, "aux" ) )
+          aux = current_node;        
+        if( !strcmp( (char *) current_node->name, "m0" ) )
+          m0 = current_node;        
+        if( !strcmp( (char *) current_node->name, "m1" ) )
+          m1 = current_node;        
+      }
+    }
+
+    if( !chip )
+      strncpy( pinout->chip.name, (const char *) xmlNodeGetContent( chip ), NAME_MAX );
+    if( !aux )
+      pinout->aux.offset = (uint8_t) atoi( (const char *) xmlNodeGetContent( aux ) );   
+    if( !m0 )
+      pinout->m0.offset = (uint8_t) atoi( (const char *) xmlNodeGetContent( m0 ) );   
+    if( !m1 )
+      pinout->m1.offset = (uint8_t) atoi( (const char *) xmlNodeGetContent( m1 ) );   
+  }
+
+  xmlFreeDoc( docfile );
+  xmlCleanupParser( );
+  return 0;
+}
+
+/***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+int8_t 
 e22900t22s_default_config( const uint8_t update, e22900t22s_t * dev ){
   if( !check( dev ) )
     return -1;
@@ -253,6 +495,16 @@ lookup_table_baudrate_2code( const uint8_t baud_bin ){
 }
 
 /***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+baudRate_t 
+lookup_table_baudrate_fromtext_2code( const char * baud_text ){
+  for( uint8_t i = 0 ; i < E22900T22S_LUT_SIZE_UART ; ++i )
+    if( !strcmp( lut_baudrate[ i ].text, baud_text ) )
+      return lut_baudrate[ i ].code;
+  return B9600;
+}
+
+
+/***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
 uint8_t 
 lookup_table_parity_2bin( const parity_t parity_code ){
   for( uint8_t i = 0 ; i < E22900T22S_LUT_SIZE_PARITY ; ++i )
@@ -278,6 +530,17 @@ lookup_table_parity_2code( const uint8_t parity_bin ){
       return lut_parity[ i ].code;
   return 0xFF;
 }
+
+
+/***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+parity_t 
+lookup_table_parity_fromtext_2code( const char * parity_text ){
+  for( uint8_t i = 0 ; i < E22900T22S_LUT_SIZE_PARITY ; ++i )
+    if( !strcmp( lut_parity[ i ].text, parity_text ) )
+      return lut_parity[ i ].code;
+  return BPARITY_NONE;
+}
+
 
 /***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
 uint8_t 
@@ -307,12 +570,31 @@ lookup_table_airrate_2code( const uint8_t baud_bin ){
 }
 
 /***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+baudRate_t 
+lookup_table_airrate_fromtext_2code( const char * baud_text ){
+  for( uint8_t i = 0 ; i < E22900T22S_LUT_SIZE_AIRRATE ; ++i )
+    if( !strcmp( lut_airrate[ i ].text, baud_text ) )
+      return lut_airrate[ i ].code;
+  return B9600;
+}
+
+
+/***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
 const char * 
 lookup_table_packet_2text( const e22900t22s_packet_size_t code ){
   for( uint8_t i = 0 ; i < E22900T22S_LUT_SIZE_PACKET ; ++i )
     if( lut_packetsize[ i ].code == code )
       return lut_packetsize[ i ].text;
   return "";
+}
+
+/***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+e22900t22s_packet_size_t 
+lookup_table_packet_fromtext( const char * size_text ){
+  for( uint8_t i = 0 ; i < E22900T22S_LUT_SIZE_PACKET ; ++i )
+    if( !strcmp( lut_packetsize[ i ].text, size_text ) )
+      return lut_packetsize[ i ].code;
+  return E22900T22S_PACKET_32;
 }
 
 /***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
@@ -325,12 +607,30 @@ lookup_table_power_2text( const e22900t22s_transmission_power_t code ){
 }
 
 /***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+e22900t22s_transmission_power_t 
+lookup_table_power_fromtext( const char * power_text ){
+  for( uint8_t i = 0 ; i < E22900T22S_LUT_SIZE_POWER ; ++i )
+    if( !strcmp( lut_power[ i ].text, power_text) )
+      return lut_power[ i ].code;
+  return E22900T22S_DBM_22;
+}
+
+/***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
 const char * 
 lookup_table_worcycle_2text( const e22900t22s_wor_cycle_t code ){
   for( uint8_t i = 0 ; i < E22900T22S_LUT_SIZE_WORCYCLE ; ++i )
     if( lut_worcycle[ i ].code == code )
       return lut_worcycle[ i ].text;
   return "";
+}
+
+/***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+e22900t22s_wor_cycle_t 
+lookup_table_worcycle_fromtext( const char * cycle_text ){
+  for( uint8_t i = 0 ; i < E22900T22S_LUT_SIZE_WORCYCLE ; ++i )
+    if( !strcmp( lut_worcycle[ i ].text, cycle_text) )
+      return lut_worcycle[ i ].code;
+  return E22900T22S_WOR_2000;
 }
 
 /***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/

@@ -1,0 +1,36 @@
+<e22900t22s>
+    <address>0</address>
+    <network>
+        <id>0</id>
+        <key>0</key>
+    </network>
+    <serial>
+        <baudrate>9600</baudrate>
+        <parity>8N1</parity>
+    </serial>
+    <rf>
+        <baudrate>9600</baudrate>
+        <size>32</size>
+        <power>22</power>
+        <channel>0</channel>
+        <modes>
+            <fixed>0</fixed>
+            <repeater>0</repeater>
+            <lbt>1</lbt>
+            <wor>
+                <state>0</state>
+                <cycle>2000</cycle>
+            </wor>
+        </modes>
+        <stats>
+            <rssi>0</rssi>
+            <noise>0</noise>
+        </stats>
+    </rf>
+    <pin>
+        <chip>gpiochipX2<chip>
+        <aux>0</aux>
+        <m0>1</m0>
+        <m1>7</m1>
+    </pin>
+</e22900t22s>
