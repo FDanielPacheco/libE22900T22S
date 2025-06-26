@@ -222,6 +222,7 @@ e22900t22s_set_pinout( const e22900t22s_pinmode_t * pinout, e22900t22s_t * dev )
     errno = EINVAL;
     return -1;
   }
+  printf("Chip:%s, %d, %d, %d\n", pinout->chip.name, pinout->m0.offset, pinout->m1.offset, pinout->aux.offset );
   return e22900t22s_gpio_init( pinout->chip.name, pinout->m0.offset, pinout->m1.offset, pinout->aux.offset, dev );
 }
 
@@ -312,7 +313,7 @@ e22900t22s_load_config( const char * filename, e22900t22s_eeprom_t * config, e22
     if( NULL != baudrate )
       config->baudrate = lookup_table_baudrate_fromtext_2code( (const char *) xmlNodeGetContent( baudrate ) );
     if( NULL != parity )
-      config->parity = lookup_table_baudrate_fromtext_2code( (const char *) xmlNodeGetContent( parity ) );    
+      config->parity = lookup_table_parity_fromtext_2code( (const char *) xmlNodeGetContent( parity ) );    
   }
 
   if( NULL != rf ){
