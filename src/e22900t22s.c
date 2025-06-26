@@ -894,7 +894,7 @@ gpiod_pin_mode( gpiod_chip2_t * chip, gpiod_line2_t * gpio, uint8_t direction ){
   }
   gpio->ptr = gpiod_chip_get_line( chip->ptr, gpio->offset );
   if( !gpio->ptr ){
-    printf("[%d] gpiod_chip_get_line: %d ...\n", getpid( ), gpio->offset );
+    printf("[%d] gpiod_chip_get_line (%x): %d ...\n", getpid( ), chip->ptr, gpio->offset );
     gpiod_chip_close( chip->ptr );
     return -1;
   }
