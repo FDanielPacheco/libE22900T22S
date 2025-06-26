@@ -340,16 +340,16 @@ e22900t22s_load_config( const char * filename, e22900t22s_eeprom_t * config, e22
       }
     }
 
-    if( !baudrate )
+    if( NULL != baudrate )
       config->airrate = lookup_table_airrate_fromtext_2code( (const char *) xmlNodeGetContent( baudrate ) );
-    if( !size )
+    if( NULL != size )
       config->packet_size = lookup_table_packet_fromtext( (const char *) xmlNodeGetContent( size ) );
-    if( !power )
+    if( NULL != power )
       config->transmit_power = lookup_table_power_fromtext( (const char *) xmlNodeGetContent( power ) );
-    if( !channel )
+    if( NULL != channel )
       config->channel = (uint8_t) atoi( (const char *) xmlNodeGetContent( channel ) );
 
-    if( !modes ){
+    if( NULL != modes ){
       xmlNode * fixed = NULL;
       xmlNode * repeater = NULL;
       xmlNode * lbt = NULL;
@@ -368,14 +368,14 @@ e22900t22s_load_config( const char * filename, e22900t22s_eeprom_t * config, e22
         }
       }
 
-      if( !fixed )
+      if( NULL != fixed )
         config->fixed = !atoi( (const char *) xmlNodeGetContent( fixed ) ) ? 0 : 1;
-      if( !repeater )
+      if( NULL != repeater )
         config->repeater = !atoi( (const char *) xmlNodeGetContent( repeater ) ) ? 0 : 1;
-      if( !lbt )
+      if( NULL != lbt )
         config->lbt = !atoi( (const char *) xmlNodeGetContent( lbt ) ) ? 0 : 1;
 
-      if( !wor ){
+      if( NULL != wor ){
         xmlNode * state;
         xmlNode * cycle;
 
@@ -388,14 +388,14 @@ e22900t22s_load_config( const char * filename, e22900t22s_eeprom_t * config, e22
           }
         }
 
-        if( !state )
+        if( NULL != state )
           config->wor = !atoi( (const char *) xmlNodeGetContent( state ) ) ? 0 : 1;
-        if( !cycle )
+        if( NULL != cycle )
           config->wor_cycle = lookup_table_worcycle_fromtext( (const char *) xmlNodeGetContent( cycle ) );
       }
     }
 
-    if( !stats ){
+    if( NULL != stats ){
       xmlNode * rssi;
       xmlNode * noise;
 
@@ -408,14 +408,14 @@ e22900t22s_load_config( const char * filename, e22900t22s_eeprom_t * config, e22
         }
       }
 
-      if( !rssi )
+      if( NULL != rssi )
         config->rssi = !atoi( (const char *) xmlNodeGetContent( rssi ) ) ? 0 : 1;
-      if( !noise )
+      if( NULL != noise )
         config->ambient_noise = !atoi( (const char *) xmlNodeGetContent( noise ) ) ? 0 : 1;
     }
   }
 
-  if( !pin ){
+  if( NULL != pin ){
     xmlNode * chip;
     xmlNode * aux;
     xmlNode * m0;
@@ -434,13 +434,13 @@ e22900t22s_load_config( const char * filename, e22900t22s_eeprom_t * config, e22
       }
     }
 
-    if( !chip )
+    if( NULL != chip )
       strncpy( pinout->chip.name, (const char *) xmlNodeGetContent( chip ), NAME_MAX );
-    if( !aux )
+    if( NULL != aux )
       pinout->aux.offset = (uint8_t) atoi( (const char *) xmlNodeGetContent( aux ) );   
-    if( !m0 )
+    if( NULL != m0 )
       pinout->m0.offset = (uint8_t) atoi( (const char *) xmlNodeGetContent( m0 ) );   
-    if( !m1 )
+    if( NULL != m1 )
       pinout->m1.offset = (uint8_t) atoi( (const char *) xmlNodeGetContent( m1 ) );   
   }
 
