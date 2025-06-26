@@ -1,0 +1,22 @@
+<mixip>
+  <serial>
+    <tx>
+      <name>loratx</name>
+      <device>/dev/ttyS0</device>
+      <driver>./libe22900t22s.so</driver>
+    </tx>
+    <rx>
+      <name>lorarx</name>
+      <device>/dev/ttyUSB0</device>
+      <driver>./libe22900t22s.so</driver>
+    </rx>
+  </serial>
+  <network>
+    <ring>
+      <nframes>14</nframes>
+    </ring>
+    <default>
+      <name>lora0</name>
+    </default>
+  </network>
+</mixip>
