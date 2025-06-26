@@ -877,6 +877,7 @@ gpiod_init( const char * name, gpiod_chip2_t * chip ){
   }
   chip->ptr = gpiod_chip_open_by_name( name );
   if( !chip->ptr ){
+    printf("[%d] chipname:%s ", getpid( ), name );
     perror("gpiod_chip_open_by_name");
     return -1;
   }
