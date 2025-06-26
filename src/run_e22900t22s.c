@@ -37,14 +37,18 @@ int dsetup( serial_manager_t * serial, const char * name ){
   e22900t22s_eeprom_t eeprom;
   e22900t22s_pinmode_t pinout;
 
+  printf("[%d] Setup on %s ...\n", getpid( ), getenv(name) );
+
   int8_t ret = e22900t22s_load_config( getenv(name), &eeprom, &pinout );
   if( -1 == ret ){
+    printf("[%d] ", getpid( ));
     perror("Load XML configuration");
     return -1;
   }
 
   ret = e22900t22s_set_pinout( &pinout, &driver );
   if( -1 == ret ){
+    printf("[%d] ", getpid( ));
     perror("Set the pinout");
     e22900t22s_gpio_close( &driver );
     return -1;
@@ -52,6 +56,7 @@ int dsetup( serial_manager_t * serial, const char * name ){
     
   ret = e22900t22s_set_config( &eeprom, 0, &driver );
   if( -1 == ret ){
+    printf("[%d] ", getpid( ));
     perror("Set the EEPROM configuration");
     e22900t22s_gpio_close( &driver );
     return -1;
@@ -59,6 +64,7 @@ int dsetup( serial_manager_t * serial, const char * name ){
 
   ret = e22900t22s_update_eeprom( &driver );
   if( -1 == ret ){
+    printf("[%d] ", getpid( ));
     perror("Updating the EEPROM");
     e22900t22s_gpio_close( &driver );
     return -1;
@@ -66,6 +72,7 @@ int dsetup( serial_manager_t * serial, const char * name ){
 
   ret = e22900t22s_get_config( &driver );
   if( -1 == ret ){
+    printf("[%d] ", getpid( ));
     perror("Retriving the EEPROM");
     e22900t22s_gpio_close( &driver );
     return -1;
