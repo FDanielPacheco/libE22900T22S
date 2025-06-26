@@ -894,6 +894,7 @@ gpiod_pin_mode( gpiod_chip2_t * chip, gpiod_line2_t * gpio, uint8_t direction ){
   }
   gpio->ptr = gpiod_chip_get_line( chip->ptr, gpio->offset );
   if( !gpio->ptr ){
+    printf("[%d] gpiod_chip_get_line: %d ...\n", getpid( ), gpio->offset );
     gpiod_chip_close( chip->ptr );
     return -1;
   }
@@ -906,6 +907,7 @@ gpiod_pin_mode( gpiod_chip2_t * chip, gpiod_line2_t * gpio, uint8_t direction ){
     ret = gpiod_line_request_input_flags( gpio->ptr, "lora_driver", GPIOD_LINE_REQUEST_FLAG_BIAS_PULL_UP );
 
   if( -1 == ret ){
+    printf("[%d] gpiod_line_request_input_flags: %d ...\n", getpid( ), gpio->offset );
     gpiod_chip_close( chip->ptr );
     return -1;
   }
