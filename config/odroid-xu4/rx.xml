@@ -29,8 +29,8 @@
     </rf>
     <pin>
         <chip>gpiochip3</chip>
-        <aux>0</aux>
-        <m0>1</m0>
+        <aux>4</aux>
+        <m0>6</m0>
         <m1>7</m1>
     </pin>
 </e22900t22s>
