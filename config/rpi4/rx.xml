@@ -28,7 +28,7 @@
         </stats>
     </rf>
     <pin>
-        <chip>gpiochip1</chip>
+        <chip>gpiochip0</chip>
         <aux>25</aux>
         <m0>7</m0>
         <m1>13</m1>

@@ -30,7 +30,7 @@
     <pin>
         <chip>gpiochip3</chip>
         <aux>0</aux>
-        <m0>2</m0>
+        <m0>1</m0>
         <m1>7</m1>
     </pin>
 </e22900t22s>
