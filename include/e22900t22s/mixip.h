@@ -58,7 +58,8 @@ typedef struct{
  * @param[in] name The path to the shared memory object.
  * @param[out] config The new filled configuration object.
  * 
- * @return Upon success, it will fill the `config` struct, and it returns 0. \n
+ * @return If the driver is configured as transmitter or default, upon success, it will fill the `config` struct, and return 0. \n
+ *         If the driver is configured as receiver it will return 1. \n
  *         Otherwise, -1 is returned and `errno` is set to indicate the error.
  **************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
 int8_t e22900t22s_connect_mixip( const char * name, e22900t22s_mixip_t * config );

@@ -1,6 +1,7 @@
 #include <mixip.h> 
 #include <time.h>
 #include <unistd.h>
+#include <string.h>
 
 #include <e22900t22s/core.h>
 #include <e22900t22s/metrics.h>
@@ -61,7 +62,7 @@ int dsetup( serial_manager_t * serial, const char * name ){
     perror("Load XML configuration [e22900t22s_load_config]");
     return -1;
   }
-
+  
   ret = e22900t22s_load_mixip_config( getenv(name), &translator );
   if( -1 == ret ){
     printf("[%d] ", getpid( ));
@@ -73,15 +74,31 @@ int dsetup( serial_manager_t * serial, const char * name ){
   if( -1 == ret ){
     printf("[%d] ", getpid( ));
     perror("Connect driver to the translator");
+    printf("[%d] ", getpid( ));
     printf("Path given: %s_tx_param\n", name);
     return -1;
   }
 
-  ret = e22900t22s_update_mixip_config( &translator );
-  if( -1 == ret ){
-    printf("[%d] ", getpid( ));
-    perror("Update the translator from the driver");
-    return -1;
+  enum{
+    IS_TRANSMITTER = 0,
+    IS_RECEIVER = 1,  
+  };
+
+  switch( ret ){
+    case IS_TRANSMITTER:
+      // This driver is a transmitter
+      ret = e22900t22s_update_mixip_config( &translator );
+      if( -1 == ret ){
+        printf("[%d] ", getpid( ));
+        perror("Update the translator from the driver");
+        return -1;
+      }
+      break;
+
+    default:
+    case IS_RECEIVER:
+      // This driver is a receiver
+      break;      
   }
 
   ret = e22900t22s_set_pinout( &pinout, &driver );
