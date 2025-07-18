@@ -33,4 +33,8 @@
         <m0>6</m0>
         <m1>5</m1>
     </pin>
+    <translator>
+        <slots>4</slots>
+        <srsize>32</srsize>
+    </translator>
 </e22900t22s>

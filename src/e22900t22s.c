@@ -24,7 +24,9 @@
  * Imported libraries
  **************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
 
-#include <e22900t22s.h>
+#include <e22900t22s/core.h>
+#include <e22900t22s/metrics.h>
+#include <e22900t22s/mixip.h>
 #include <errno.h>
 #include <string.h>
 #include <stddef.h>
@@ -67,6 +69,12 @@ int8_t gpiod_init( const char * name, gpiod_chip2_t * chip );
 int8_t gpiod_pin_mode( gpiod_chip2_t * chip, gpiod_line2_t * gpio, uint8_t direction );
 int8_t gpiod_digital_write( gpiod_line2_t * gpio, uint8_t value );
 int8_t gpiod_digital_read( gpiod_line2_t * gpio );
+
+/***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************
+ * Global variables
+ **************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+
+uint32_t delay_us = 100;
 
 /***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************
  * Functions
@@ -641,72 +649,36 @@ int8_t
 e22900t22s_update_eeprom( e22900t22s_t * dev ){
   if( !check( dev ) )
     return -1;
-  
-  if( -1 == e22900t22s_set_mode( E22900T22S_MODE_CONFIG, dev ) ){
-    perror("e22900t22s_set_mode");
-    return -1;
-  }
 
-  uint8_t cfg[NAME_MAX], ret[NAME_MAX];
+  uint8_t cfg[NAME_MAX];
 
   // Overhead
   cfg[ 0 ] = E22900T22S_SET_REG;           // Command  
   cfg[ 1 ] = E22900T22S_MEM_ADDH;          // Starting address
   cfg[ 2 ] = E22900T22S_MEM_CRYPTL + 1;    // Length
   // Parameters
-  cfg[ 3 + E22900T22S_MEM_ADDH ] = (uint8_t) (dev->cfg.address >> 7) & 0xFF;
-  cfg[ 3 + E22900T22S_MEM_ADDL ] = (uint8_t) dev->cfg.address & 0xFF ;
-  cfg[ 3 + E22900T22S_MEM_NETID ] = dev->cfg.netid ;
-  cfg[ 3 + E22900T22S_MEM_REG0 ] = (uint8_t) (lookup_table_baudrate_2bin( dev->cfg.baudrate ) << E22900T22S_SHF_UART |
-                                   lookup_table_parity_2bin( dev->cfg.parity ) << E22900T22S_SHF_PARITY |
-                                   lookup_table_airrate_2bin( dev->cfg.airrate ) << E22900T22S_SHF_AIRDATA);
-  cfg[ 3 + E22900T22S_MEM_REG1 ] = (uint8_t) ( dev->cfg.packet_size << E22900T22S_SHF_PKTSZ |
-                                   dev->cfg.ambient_noise << E22900T22S_SHF_AMBNS | 
-                                   dev->cfg.transmit_power << E22900T22S_SHF_POWER );
-  cfg[ 3 + E22900T22S_MEM_REG2 ] = dev->cfg.channel;
-  cfg[ 3 + E22900T22S_MEM_REG3 ] = (uint8_t) (dev->cfg.rssi << E22900T22S_SHF_RSSI |
-                                   dev->cfg.fixed << E22900T22S_SHF_FIXED | 
-                                   dev->cfg.repeater << E22900T22S_SHF_REPLY |
-                                   dev->cfg.lbt << E22900T22S_SHF_LBT |
-                                   dev->cfg.wor << E22900T22S_SHF_WOR |
-                                   dev->cfg.wor_cycle << E22900T22S_SHF_WORCYC );
-  cfg[ 3 + E22900T22S_MEM_CRYPTH ] = (uint8_t) (dev->cfg.encryption >> 7) & 0xFF;
-  cfg[ 3 + E22900T22S_MEM_CRYPTL ] = (uint8_t) dev->cfg.encryption & 0xFF;
+  cfg[ E22900T22S_MEM_ADDH ] = (uint8_t) (dev->cfg.address >> 7) & 0xFF;
+  cfg[ E22900T22S_MEM_ADDL ] = (uint8_t) dev->cfg.address & 0xFF ;
+  cfg[ E22900T22S_MEM_NETID ] = dev->cfg.netid ;
+  cfg[ E22900T22S_MEM_REG0 ] = (uint8_t) ((uint8_t) lookup_table_baudrate_2bin( dev->cfg.baudrate ) << E22900T22S_SHF_UART   |
+                                          (uint8_t) lookup_table_parity_2bin( dev->cfg.parity )     << E22900T22S_SHF_PARITY |
+                                          (uint8_t) lookup_table_airrate_2bin( dev->cfg.airrate )   << E22900T22S_SHF_AIRDATA);
+  cfg[ E22900T22S_MEM_REG1 ] = (uint8_t) ((uint8_t) dev->cfg.packet_size   << E22900T22S_SHF_PKTSZ  |
+                                          (uint8_t) dev->cfg.ambient_noise  << E22900T22S_SHF_AMBNS | 
+                                          (uint8_t) dev->cfg.transmit_power << E22900T22S_SHF_POWER );
+  cfg[ E22900T22S_MEM_REG2 ] = dev->cfg.channel;
+  cfg[ E22900T22S_MEM_REG3 ] = (uint8_t) ((uint8_t) dev->cfg.rssi      << E22900T22S_SHF_RSSI  |
+                                          (uint8_t) dev->cfg.fixed     << E22900T22S_SHF_FIXED | 
+                                          (uint8_t) dev->cfg.repeater  << E22900T22S_SHF_REPLY |
+                                          (uint8_t) dev->cfg.lbt       << E22900T22S_SHF_LBT   |
+                                          (uint8_t) dev->cfg.wor       << E22900T22S_SHF_WOR   |
+                                          (uint8_t) dev->cfg.wor_cycle << E22900T22S_SHF_WORCYC );
+  cfg[ E22900T22S_MEM_CRYPTH ] = (uint8_t) (dev->cfg.encryption >> 7) & 0xFF;
+  cfg[ E22900T22S_MEM_CRYPTL ] = (uint8_t) dev->cfg.encryption & 0xFF;
 
-  uint8_t cfglen = 3 + 1 + E22900T22S_MEM_CRYPTL;
-  //     Overhead_/   /              \_ Last memory address
-  //     Mem Index 0_/
-
-  int8_t aux;
-  while( !( aux = gpiod_digital_read( &dev->gpio.aux ) ) ){
-    if( -1 == aux ){
-      perror("gpiod_digital_read");
-      return -1;    
-    }
-    usleep( 10 );
-  }
-
-  if( !serial_write( &dev->serial->sr, cfg, cfglen ) ){
-    perror("serial_write");
-    return -1;
-  }
-  serial_flush( &dev->serial->sr );
-
-  uint8_t len = (uint8_t) serial_read( (char *) ret, sizeof(ret), 0, cfglen, &dev->serial->sr );
-  if( len != cfglen ){
-    perror("serial_read - not same size");
-    return -1;
-  }
- 
-  //                      __ Since first byte changes from C0 to C1
-  //                     /
-  if( 0 != memcmp( &ret[1], &cfg[1], len ) ){
-    perror("serial_read - not match words");
-    return -1;
-  }
-    
-  if( -1 == e22900t22s_set_mode( E22900T22S_MODE_NORMAL, dev ) ){
-    perror("e22900t22s_set_mode");
+  uint8_t len = e22900t22s_write_register( E22900T22S_MEM_ADDH, E22900T22S_MEM_CRYPTL + 1, cfg, dev );
+  if( !len ){
+    perror("e22900t22s_write_register");
     return -1;
   }
 
@@ -717,91 +689,41 @@ e22900t22s_update_eeprom( e22900t22s_t * dev ){
 int8_t 
 e22900t22s_get_config( e22900t22s_t * dev ){
   uint8_t cfg[NAME_MAX];
-
-  if( -1 == e22900t22s_set_mode( E22900T22S_MODE_CONFIG, dev ) ){
-    perror("e22900t22s_set_mode");
-    return -1;
-  }
-  
-  int8_t aux;
-  while( !( aux = gpiod_digital_read( &dev->gpio.aux ) ) ){
-    if( -1 == aux ){
-      perror("gpiod_digital_read");
-      return -1;    
-    }
-    usleep( 10 );
-  }
-
-  // Overhead - Read Configuration memory block
-  cfg[ 0 ] = E22900T22S_READ_REG;          // Command  
-  cfg[ 1 ] = E22900T22S_MEM_ADDH;          // Starting address
-  cfg[ 2 ] = E22900T22S_MEM_REG3 + 1;      // Length
-  if( !serial_write( &dev->serial->sr, cfg, 3 ) ){
-    perror("serial_write");
-    return -1;
-  }
-  serial_flush( &dev->serial->sr );
-  
-  uint8_t cfglen = 3 + 1 + E22900T22S_MEM_REG3;
-  //     Overhead_/   /              \_ Last memory address
-  //     Mem Index 0_/
-
-  uint8_t len = (uint8_t) serial_read( (char *) cfg, sizeof(cfg), 0, cfglen , &dev->serial->sr );
-  if( len != cfglen ){
-    perror("serial_read - not same size");
+  uint8_t len = e22900t22s_read_register( E22900T22S_MEM_ADDH, E22900T22S_MEM_REG3 + 1, cfg, sizeof(cfg), dev );
+  //                                Start address__/                     / 
+  //                                                      Last address__/
+  if( !len ){
+    perror("e22900t22s_read_register");
     return -1;
   }
 
-  dev->cfg.address = (uint16_t) (cfg[ 3 + E22900T22S_MEM_ADDH ] << 8 | cfg[ 3 + E22900T22S_MEM_ADDL ]);
-  dev->cfg.netid = cfg[ 3 + E22900T22S_MEM_NETID ];
-  dev->cfg.baudrate = lookup_table_baudrate_2code( (cfg[ 3 + E22900T22S_MEM_REG0 ] >> E22900T22S_SHF_UART) & (E22900T22S_LUT_SIZE_UART - 1) );
-  dev->cfg.parity = lookup_table_parity_2code( (cfg[ 3 + E22900T22S_MEM_REG0 ] >> E22900T22S_SHF_PARITY) & (E22900T22S_LUT_SIZE_PARITY - 1) );
-  dev->cfg.airrate = lookup_table_airrate_2code( (cfg[ 3 + E22900T22S_MEM_REG0 ] >> E22900T22S_SHF_AIRDATA) & (E22900T22S_LUT_SIZE_AIRRATE - 1) );
-  dev->cfg.packet_size = (cfg[ 3 + E22900T22S_MEM_REG1 ] >> E22900T22S_SHF_PKTSZ) & (E22900T22S_LUT_SIZE_PACKET - 1);
-  dev->cfg.ambient_noise = (cfg[ 3 + E22900T22S_MEM_REG1 ] >> E22900T22S_SHF_AMBNS) & 1; 
-  dev->cfg.transmit_power = (cfg[ 3 + E22900T22S_MEM_REG1 ] >> E22900T22S_SHF_POWER) & (E22900T22S_LUT_SIZE_POWER - 1); 
-  dev->cfg.channel = cfg[ 3 + E22900T22S_MEM_REG2 ];
-  dev->cfg.rssi = (cfg[ 3 + E22900T22S_MEM_REG3 ] >> E22900T22S_SHF_RSSI) & 1;
-  dev->cfg.fixed = (cfg[ 3 + E22900T22S_MEM_REG3 ] >> E22900T22S_SHF_FIXED) & 1;
-  dev->cfg.repeater = (cfg[ 3 + E22900T22S_MEM_REG3 ] >> E22900T22S_SHF_REPLY) & 1;
-  dev->cfg.lbt = (cfg[ 3 + E22900T22S_MEM_REG3 ] >> E22900T22S_SHF_LBT) & 1;
-  dev->cfg.wor = (cfg[ 3 + E22900T22S_MEM_REG3 ] >> E22900T22S_SHF_WOR) & 1;
-  dev->cfg.wor_cycle = (cfg[ 3 + E22900T22S_SHF_WORCYC ] >> E22900T22S_SHF_WOR) & (E22900T22S_LUT_SIZE_WORCYCLE - 1);
+  dev->cfg.address = (uint16_t) (cfg[ E22900T22S_MEM_ADDH ] << 8 | cfg[ E22900T22S_MEM_ADDL ]);
+  dev->cfg.netid = cfg[ E22900T22S_MEM_NETID ];
+  dev->cfg.baudrate = lookup_table_baudrate_2code( (cfg[ E22900T22S_MEM_REG0 ] >> E22900T22S_SHF_UART) & (E22900T22S_LUT_SIZE_UART - 1) );
+  dev->cfg.parity = lookup_table_parity_2code( (cfg[ E22900T22S_MEM_REG0 ] >> E22900T22S_SHF_PARITY) & (E22900T22S_LUT_SIZE_PARITY - 1) );
+  dev->cfg.airrate = lookup_table_airrate_2code( (cfg[ E22900T22S_MEM_REG0 ] >> E22900T22S_SHF_AIRDATA) & (E22900T22S_LUT_SIZE_AIRRATE - 1) );
+  dev->cfg.packet_size = (cfg[ E22900T22S_MEM_REG1 ] >> E22900T22S_SHF_PKTSZ) & (E22900T22S_LUT_SIZE_PACKET - 1);
+  dev->cfg.ambient_noise = (cfg[ E22900T22S_MEM_REG1 ] >> E22900T22S_SHF_AMBNS) & 1; 
+  dev->cfg.transmit_power = (cfg[ E22900T22S_MEM_REG1 ] >> E22900T22S_SHF_POWER) & (E22900T22S_LUT_SIZE_POWER - 1); 
+  dev->cfg.channel = cfg[ E22900T22S_MEM_REG2 ];
+  dev->cfg.rssi = (cfg[ E22900T22S_MEM_REG3 ] >> E22900T22S_SHF_RSSI) & 1;
+  dev->cfg.fixed = (cfg[ E22900T22S_MEM_REG3 ] >> E22900T22S_SHF_FIXED) & 1;
+  dev->cfg.repeater = (cfg[ E22900T22S_MEM_REG3 ] >> E22900T22S_SHF_REPLY) & 1;
+  dev->cfg.lbt = (cfg[ E22900T22S_MEM_REG3 ] >> E22900T22S_SHF_LBT) & 1;
+  dev->cfg.wor = (cfg[ E22900T22S_MEM_REG3 ] >> E22900T22S_SHF_WOR) & 1;
+  dev->cfg.wor_cycle = (cfg[ E22900T22S_SHF_WORCYC ] >> E22900T22S_SHF_WOR) & (E22900T22S_LUT_SIZE_WORCYCLE - 1);
 
-  while( !( aux = gpiod_digital_read( &dev->gpio.aux ) ) ){
-    if( -1 == aux ){
-      perror("gpiod_digital_read");
-      return -1;    
-    }
-    usleep( 10 );
-  }
-
-  // Overhead - Read PID
-  cfg[ 0 ] = E22900T22S_READ_REG;          // Command  
-  cfg[ 1 ] = E22900T22S_MEM_PID;           // Starting address
-  cfg[ 2 ] = E22900T22S_PID_SIZE;          // Length
-  if( !serial_write( &dev->serial->sr, cfg, 3 ) ){
-    perror("serial_write");
+  len = e22900t22s_read_register( E22900T22S_MEM_PID, E22900T22S_PID_SIZE, cfg, sizeof(cfg), dev );
+  if( !len ){
+    perror("e22900t22s_read_register");
     return -1;
   }
-  serial_flush( &dev->serial->sr );
-  
-       cfglen = 3 + E22900T22S_PID_SIZE;
-  //  Overhead_/             \_ Last memory address
-
-  len = (uint8_t) serial_read( (char *) cfg, sizeof(cfg), 0, cfglen , &dev->serial->sr );
-  if( len != cfglen ){
-    perror("serial_read - not same size");
+  if( E22900T22S_PID_SIZE != len ){
+    printf("[%d] E22900T22S_PID_SIZE != len ...\n", getpid( ));
     return -1;
   }
 
-  for( uint8_t i = 0 ; i < E22900T22S_PID_SIZE ; ++i )
-    dev->cfg.pid[ i ] = cfg[ 3 + i ];
-
-  if( -1 == e22900t22s_set_mode( E22900T22S_MODE_NORMAL, dev ) ){
-    perror("e22900t22s_set_mode");
-    return -1;
-  }
+  memcpy( dev->cfg.pid, cfg, len );
 
   return 0;
 }
@@ -812,15 +734,12 @@ e22900t22s_set_mode( const e22900t22s_mode_t mode , e22900t22s_t * dev ){
   if( !check( dev ) )
     return -1;
 
-  int8_t ret = 0;
-  while( !( ret = gpiod_digital_read( &dev->gpio.aux ) ) ){
-    if( -1 == ret ){
-      perror("gpiod_digital_read");
-      return -1;    
-    }
-    usleep( 10 );
+  if( -1 == e22900t22s_while_busy( delay_us, dev ) ){
+    perror("e22900t22s_while_busy");
+    return -1;
   }
-
+  
+  int8_t ret = 0;
   uint8_t flag = 0;
   switch( mode ){
     default:
@@ -894,7 +813,6 @@ gpiod_pin_mode( gpiod_chip2_t * chip, gpiod_line2_t * gpio, uint8_t direction ){
   }
   gpio->ptr = gpiod_chip_get_line( chip->ptr, gpio->offset );
   if( !gpio->ptr ){
-    printf("[%d] gpiod_chip_get_line (%x): %d ...\n", getpid( ), chip->ptr, gpio->offset );
     gpiod_chip_close( chip->ptr );
     return -1;
   }
@@ -1045,6 +963,334 @@ e22900t22s_print_config( uint8_t console, e22900t22s_t * dev ){
     printf("%s", message );
   return message;
 }
+
+/***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+uint8_t 
+e22900t22s_read_register( const uint8_t address, const uint8_t length, uint8_t * data, const uint8_t size, e22900t22s_t * dev ){
+  if( !data ){
+    errno = EINVAL;
+    return 0;
+  }
+  
+  for( uint16_t i = 0, tmp = (uint16_t) address ; i < 2 ; ++i ){
+    if( ((0x08 < tmp) && (0x80 > tmp)) || (0x86 < tmp) ){
+      errno = EADDRNOTAVAIL;
+      return 0;
+    }
+    tmp += length - 1;
+  }
+
+  if( length > size ){
+    errno = EINVAL;
+    return 0;
+  }
+
+  if( -1 == e22900t22s_set_mode( E22900T22S_MODE_CONFIG, dev ) ){
+    perror("e22900t22s_set_mode");
+    return 0;
+  }
+  
+  if( -1 == e22900t22s_while_busy( delay_us, dev ) ){
+    perror("e22900t22s_while_busy");
+    return 0;
+  }
+  
+  uint8_t buf[NAME_MAX];
+
+  // Overhead - Read Configuration memory block
+  buf[ 0 ] = E22900T22S_READ_REG;          // Command  
+  buf[ 1 ] = address;                      // Starting address
+  buf[ 2 ] = length;                       // Length
+  if( !serial_write( &dev->serial->sr, buf, 3 ) ){
+    perror("serial_write");
+    return 0;
+  }
+  serial_flush( &dev->serial->sr );
+  
+  const uint8_t overhead = 3;
+  uint8_t buflen = overhead + length;
+
+  uint8_t len = (uint8_t) serial_read( (char *) buf, sizeof(buf), 0, buflen , &dev->serial->sr );
+  if( len != buflen ){
+    perror("serial_read - not same size");
+    return 0;
+  }
+   
+  memcpy( data, &buf[overhead], length );
+
+  if( -1 == e22900t22s_set_mode( E22900T22S_MODE_NORMAL, dev ) ){
+    perror("e22900t22s_set_mode");
+    return 0;
+  }
+
+  return length;
+}
+
+/***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+uint8_t 
+e22900t22s_write_register( const uint8_t address, const uint8_t length, const uint8_t * data, e22900t22s_t * dev ){
+  if( !data ){
+    errno = EINVAL;
+    return 0;
+  }
+
+  for( uint16_t i = 0, tmp = (uint16_t) address ; i < 2 ; ++i ){
+    if( ((0x08 < tmp) && (0x80 > tmp)) || (0x86 < tmp) ){
+      errno = EADDRNOTAVAIL;
+      return 0;
+    }
+    tmp += length - 1;
+  }
+
+
+  if( -1 == e22900t22s_set_mode( E22900T22S_MODE_CONFIG, dev ) ){
+    perror("e22900t22s_set_mode");
+    return 0;
+  }
+  
+  if( -1 == e22900t22s_while_busy( delay_us, dev ) ){
+    perror("e22900t22s_while_busy");
+    return 0;
+  }
+  
+  uint8_t buf[NAME_MAX], ret[NAME_MAX];
+  
+  // Overhead
+  buf[ 0 ] = E22900T22S_SET_REG;    // Command  
+  buf[ 1 ] = address;               // Starting address
+  buf[ 2 ] = length;                // Length
+  memcpy( &buf[3], data, length );
+
+  uint8_t buflen = 3 + length;
+  //      Overhead_/      \_ Length
+
+  if( !serial_write( &dev->serial->sr, buf, buflen ) ){
+    perror("serial_write");
+    return 0;
+  }
+  serial_flush( &dev->serial->sr );
+
+  uint8_t len = (uint8_t) serial_read( (char *) ret, sizeof(ret), 0, buflen, &dev->serial->sr );
+  if( len != buflen ){
+    perror("serial_read - not same size");
+    return 0;
+  }
+
+  //                      __ Since first byte changes from C0 to C1
+  //                     /
+  if( 0 != memcmp( &ret[1], &buf[1], len ) ){
+    perror("serial_read - not match words");
+    return 0;
+  }
+
+
+  if( -1 == e22900t22s_set_mode( E22900T22S_MODE_NORMAL, dev ) ){
+    perror("e22900t22s_set_mode");
+    return 0;
+  }
+
+  return length;
+}
+
+/***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+uint8_t 
+e22900t22s_read_rssi_register( const uint8_t address, const uint8_t length, uint8_t * data, const uint8_t size, e22900t22s_t * dev ){
+  if( !data ){
+    errno = EINVAL;
+    return 0;
+  }
+  
+  for( uint16_t i = 0, tmp = (uint16_t) address ; i < 2 ; ++i ){
+    if( 0x01 < tmp ){
+      errno = EADDRNOTAVAIL;
+      return 0;
+    }
+    tmp += length - 1;
+  }
+
+  if( length > size ){
+    errno = EINVAL;
+    return 0;
+  }  
+
+  if( -1 == e22900t22s_while_busy( delay_us, dev ) ){
+    perror("e22900t22s_while_busy");
+    return 0;
+  }
+
+  uint8_t buf[NAME_MAX];
+
+  // Overhead - Read Configuration memory block
+  for( uint8_t i = 0 ; i < 4 ; ++i )
+    buf[ i ] = 0xC0 + i;                   // Command: 0xC0 0xC1 0xC2 0xC3  
+  buf[ 4 ] = address;                      // Starting address
+  buf[ 5 ] = length;                       // Length
+
+  const uint8_t cmd_len = 6;
+  if( !serial_write( &dev->serial->sr, buf, cmd_len ) ){
+    perror("serial_write");
+    return 0;
+  }
+  serial_flush( &dev->serial->sr );
+  
+  // Response: 0xC1 + address + length + value(length)
+  const uint8_t overhead = 3;
+  uint8_t buflen = overhead + length;
+
+  uint8_t len = (uint8_t) serial_read( (char *) buf, sizeof(buf), 0, buflen , &dev->serial->sr );
+  if( len != buflen ){
+    perror("serial_read - not same size");
+    return 0;
+  }
+   
+  memcpy( data, &buf[overhead], length );
+
+  return length;
+}
+
+
+/***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+int8_t  
+e22900t22s_while_busy( const uint32_t delay, e22900t22s_t * dev ){
+  if( !check( dev ) )
+    return -1;
+
+  int8_t aux;
+  while( !( aux = gpiod_digital_read( &dev->gpio.aux ) ) ){
+    if( -1 == aux ){
+      perror("gpiod_digital_read");
+      return -1;    
+    }
+    usleep( delay );
+  }
+  
+  return 0;
+}
+
+/***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+int8_t 
+e22900t22s_connect_mixip( const char * name, e22900t22s_mixip_t * config ){
+  if( !name || !config ){
+    errno = EINVAL;
+    return -1;
+  }
+  if( -1 == mixip_translator_connect( name, config->ptr ) )
+    return -1;
+
+  return 0;
+}
+
+/***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+int8_t 
+e22900t22s_load_mixip_config( const char * filename, e22900t22s_mixip_t * config ){
+  if( !config || !filename ){
+    errno = EINVAL;
+    return -1;
+  }
+
+  xmlDoc * docfile = xmlReadFile( filename, NULL, 0 );
+  if( !docfile ){
+    errno = EINVAL;
+    perror("xmlReadFile");
+    return -1;
+  }
+  
+  xmlNode * root_element = xmlDocGetRootElement(docfile);
+  if( !root_element ){
+    errno = EINVAL;
+    perror("xmlDocGetRootElement");
+    xmlFreeDoc( docfile );
+    return -1;
+  }
+
+  memset( config, 0, sizeof(e22900t22s_mixip_t) );
+
+  xmlNode * translator = NULL;
+
+  if( !strcmp( (char *) root_element->name, "e22900t22s" ) ){
+    for( xmlNode * current_node = root_element->children ; current_node != NULL ; current_node = current_node->next ){
+      if( XML_ELEMENT_NODE == current_node->type ){
+        if( !strcmp( (char *) current_node->name, "translator" ) )
+          translator = current_node;        
+      }        
+    }
+  }  
+
+  if( NULL != translator ){
+    xmlNode * slots = NULL;
+    xmlNode * srsize = NULL;
+
+    for( xmlNode * current_node = translator->children ; current_node != NULL ; current_node = current_node->next ){
+      if( XML_ELEMENT_NODE == current_node->type ){
+        if( !strcmp( (char *) current_node->name, "slots" ) )
+          slots = current_node;        
+        if( !strcmp( (char *) current_node->name, "srsize" ) )
+          srsize = current_node;        
+      }
+    }
+
+    if( NULL != slots )
+      config->tmp.size_rb = (uint8_t) atoi( (const char *) xmlNodeGetContent( slots ) );
+    else
+      config->tmp.size_rb = E22900T22S_DEF_RB; // Default value
+
+    if( NULL != srsize )
+      config->tmp.size_sls = (uint8_t) atoi( (const char *) xmlNodeGetContent( srsize ) );
+    else
+      config->tmp.size_sls = E22900T22S_DEF_SLS; // Default value
+  }
+
+  xmlFreeDoc( docfile );
+  xmlCleanupParser( );
+  return 0;  
+}
+
+/***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+int8_t 
+e22900t22s_update_mixip_config( const e22900t22s_mixip_t * config ){
+  if( !config ){
+    errno = EINVAL;
+    return -1;
+  }  
+
+  if( -1 == mixip_translator_ring_buffer_size( config->tmp.size_rb, config->ptr ) ){
+    perror("mixip_translator_ring_buffer_size");
+    return -1;
+  }
+
+  if( -1 == mixip_translator_serial_link_segment_size( config->tmp.size_sls, config->ptr ) ){
+    perror("mixip_translator_serial_link_segment_size");
+    return -1;
+  }
+
+  if( -1 == mixip_translator_activate( config->ptr ) ){
+    perror("mixip_translator_activate");
+    return -1;
+  }
+
+  return 0;  
+}
+
+/***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+int8_t 
+e22900t22s_get_rssi( e22900t22s_rssi_t * rssi, e22900t22s_t * dev ){
+  if( !rssi ){
+    errno = EINVAL;
+    return -1;
+  }
+
+  uint8_t buf[2];
+  if( !e22900t22s_read_rssi_register( E22900T22S_CURR_RSSI, E22900T22S_PAST_RSSI + 1, buf, sizeof(buf), dev ) ){
+    perror("e22900t22s_read_rssi_register");
+    return -1;
+  }
+  
+  rssi->current = (float) buf[0] * (float) (-0.5);
+  rssi->past = (float) buf[1] * (float) (-0.5);
+
+  return 0;
+}
+
 
 /***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************
  * End file

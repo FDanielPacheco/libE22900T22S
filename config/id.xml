@@ -12,9 +12,6 @@
     </rx>
   </serial>
   <network>
-    <ring>
-      <nframes>14</nframes>
-    </ring>
     <default>
       <name>lora0</name>
     </default>

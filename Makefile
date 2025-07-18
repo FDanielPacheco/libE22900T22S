@@ -1,6 +1,6 @@
 # Version
-MAJOR = 3
-MINOR = 1
+MAJOR = 2
+MINOR = 0
 RELEASE = 0
 
 # Path to LLVM
