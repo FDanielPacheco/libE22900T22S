@@ -35,3 +35,5 @@
 docs/html/
 docs/man/
 docs/latex/
+Makefile
+.mixip/

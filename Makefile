@@ -11,7 +11,7 @@ CC = clang
 CFLAGS = -std=gnu99 -I/usr/local/include/ -I/usr/include/libxml2
 CFLAGS += -Wall -Wextra -Wpedantic -Wshadow -Wconversion -g -Iinclude -fPIC
 LD_FLAGS = -shared
-LD_FLAGS += -lc -lpthread -lrt -lm -lserialposix -lxml2 -lgpiod
+LD_FLAGS += -lc -lpthread -lrt -lm -lserialposix -lxml2 -lgpiod -lmixip
 
 # Documentation
 DOCS_DIR = docs
@@ -26,9 +26,10 @@ endif
 	@echo "Creating a new driver library $(name)..."
 	@mkdir -p ./src
 	@mkdir -p ./include
+	@mkdir -p ./docs
 	@echo   "#include <mixip.h>" \
 			"\n" \
-			"\nint dsetup( serial_manager_t * serial ){\n" \
+			"\nint dsetup( serial_manager_t * serial, const char * name ){\n" \
 			" // Runs first and once...\n" \
 			" \n  return 0;" \
 			"\n}\n" \
@@ -42,7 +43,10 @@ endif
 			"\n}\n" \
 			"\nint dwrite( buffer_t * buf ){\n" \
 			" \n  return 0;" \
-			"\n}" > ./src/run-$(name).c
+			"\n}\n" \ 
+			"\nint dexit( void ){\n" \
+			" \n  return 0;" \
+			"\n}"> ./src/run-$(name).c
 	
 build:
 	@echo "Compiling driver: $(name)"
