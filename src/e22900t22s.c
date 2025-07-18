@@ -1077,8 +1077,8 @@ e22900t22s_write_register( const uint8_t address, const uint8_t length, const ui
   }
 
   //                      __ Since first byte changes from C0 to C1
-  //                     /
-  if( 0 != memcmp( &ret[1], &buf[1], len ) ){
+  //                     /              _____ Since we are starting one index forward
+  if( 0 != memcmp( &ret[1], &buf[1], len - 1 ) ){
     perror("serial_read - not match words");
     return 0;
   }
@@ -1174,7 +1174,7 @@ e22900t22s_connect_mixip( const char * name, e22900t22s_mixip_t * config ){
     errno = EINVAL;
     return -1;
   }
-  return mixip_translator_connect( name, config->ptr );
+  return mixip_translator_connect( name, &config->ptr );
 }
 
 /***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
