@@ -73,6 +73,7 @@ int dsetup( serial_manager_t * serial, const char * name ){
   if( -1 == ret ){
     printf("[%d] ", getpid( ));
     perror("Connect driver to the translator");
+    printf("Path given: %s_tx_param\n", name);
     return -1;
   }
 
