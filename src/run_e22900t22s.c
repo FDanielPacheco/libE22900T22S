@@ -160,6 +160,11 @@ dloop( flow_t * flow ){
       printf("[%d] ", getpid( ));
       perror("Updating the EEPROM");
       rep--;
+
+      serial_set_line_state( SERIAL_DTR, 0, &driver.serial->sr );
+      usleep( 5000 );
+      serial_set_line_state( SERIAL_DTR, 1, &driver.serial->sr );
+      usleep( 5000 );
     }
 
     if( !rep )
@@ -173,6 +178,11 @@ dloop( flow_t * flow ){
       printf("[%d] ", getpid( ));
       perror("e22900t22s_get_rssi");
       rep --;
+
+      serial_set_line_state( SERIAL_DTR, 0, &driver.serial->sr );
+      usleep( 5000 );
+      serial_set_line_state( SERIAL_DTR, 1, &driver.serial->sr );
+      usleep( 5000 );
     }
     else{
       printf("[%d][%s] Past: %3.2f [dBm], Current: %3.2f [dBm]\n", getpid( ), gettime( ), rssi.past, rssi.current );
@@ -192,6 +202,11 @@ dloop( flow_t * flow ){
       printf("[%d] ", getpid( ));
       perror("Updating the EEPROM");
       rep --;
+
+      serial_set_line_state( SERIAL_DTR, 0, &driver.serial->sr );
+      usleep( 5000 );
+      serial_set_line_state( SERIAL_DTR, 1, &driver.serial->sr );
+      usleep( 5000 );
     }
 
     if( !rep )
