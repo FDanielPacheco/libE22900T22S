@@ -148,6 +148,8 @@ dloop( flow_t * flow ){
   // To stop the other process (read/write) use halt_network( flow ), and continue_network( flow )
   
   sleep( 10 );
+ 
+  /*
   mixip_halt( flow );
   
   e22900t22s_rssi_t rssi;
@@ -214,6 +216,7 @@ dloop( flow_t * flow ){
   } while( 0 != ret );
     
   mixip_continue( flow );
+  */
   return 0; 
 }
  
