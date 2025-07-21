@@ -166,6 +166,10 @@ dloop( flow_t * flow ){
     printf("[%d] ", getpid( ));
     perror("e22900t22s_get_rssi");
   }
+  else{
+    printf("[%d][%s] Past: %3.2f [dBm], Current: %3.2f [dBm]\n", getpid( ), gettime( ), rssi.past, rssi.current );
+  }
+
   
   e22900t22s_set_ambient_noise( 0, &driver );
   ret = e22900t22s_update_eeprom( &driver );
@@ -174,9 +178,7 @@ dloop( flow_t * flow ){
     perror("Updating the EEPROM");
     return -1;
   }
-  
-  printf("[%d][%s] Past: %3.2f [dBm], Current: %3.2f [dBm]\n", getpid( ), gettime( ), rssi.past, rssi.current );
-  
+    
   mixip_continue( flow );
   return 0; 
 }
