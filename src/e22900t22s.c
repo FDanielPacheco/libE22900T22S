@@ -230,7 +230,7 @@ e22900t22s_set_pinout( const e22900t22s_pinmode_t * pinout, e22900t22s_t * dev )
     errno = EINVAL;
     return -1;
   }
-  printf("Chip:%s, %d, %d, %d\n", pinout->chip.name, pinout->m0.offset, pinout->m1.offset, pinout->aux.offset );
+  // printf("Chip:%s, %d, %d, %d\n", pinout->chip.name, pinout->m0.offset, pinout->m1.offset, pinout->aux.offset );
   return e22900t22s_gpio_init( pinout->chip.name, pinout->m0.offset, pinout->m1.offset, pinout->aux.offset, dev );
 }
 
@@ -1118,6 +1118,8 @@ e22900t22s_read_rssi_register( const uint8_t address, const uint8_t length, uint
     return 0;
   }
 
+  serial_set_rule( 50, 0, &dev->serial->sr );
+
   uint8_t buf[NAME_MAX];
 
   // Overhead - Read Configuration memory block
@@ -1142,6 +1144,8 @@ e22900t22s_read_rssi_register( const uint8_t address, const uint8_t length, uint
     perror("serial_read - not same size");
     return 0;
   }
+
+  serial_set_rule( 0, 0, &dev->serial->sr );
    
   memcpy( data, &buf[overhead], length );
 
