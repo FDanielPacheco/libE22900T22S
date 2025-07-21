@@ -147,7 +147,7 @@ dloop( flow_t * flow ){
   // Runs in loop, in a separeted process, consider limiting the CPU poll with a sleep...
   // To stop the other process (read/write) use halt_network( flow ), and continue_network( flow )
   
-  sleep( 1 );
+  sleep( 10 );
   mixip_halt( flow );
   
   e22900t22s_rssi_t rssi;
