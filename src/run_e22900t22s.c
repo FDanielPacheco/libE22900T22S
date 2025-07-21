@@ -165,7 +165,6 @@ dloop( flow_t * flow ){
   if( -1 == ret ){
     printf("[%d] ", getpid( ));
     perror("e22900t22s_get_rssi");
-    return -1;
   }
   
   e22900t22s_set_ambient_noise( 0, &driver );
