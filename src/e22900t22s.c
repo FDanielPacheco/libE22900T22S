@@ -779,7 +779,7 @@ e22900t22s_set_mode( const e22900t22s_mode_t mode , e22900t22s_t * dev ){
   else{
     serial_set_baudrate( B9600, &dev->serial->sr );
     serial_set_parity( BPARITY_NONE, &dev->serial->sr );
-    serial_set_rule( 50, 0, &dev->serial->sr );
+    serial_set_rule( 100, 0, &dev->serial->sr );
   }
   
   // Recomendation by the datasheet
@@ -1118,7 +1118,7 @@ e22900t22s_read_rssi_register( const uint8_t address, const uint8_t length, uint
     return 0;
   }
 
-  serial_set_rule( 50, 0, &dev->serial->sr );
+  serial_set_rule( 100, 0, &dev->serial->sr );
 
   uint8_t buf[NAME_MAX];
 
