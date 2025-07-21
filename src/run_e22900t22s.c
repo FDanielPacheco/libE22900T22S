@@ -151,33 +151,52 @@ dloop( flow_t * flow ){
   mixip_halt( flow );
   
   e22900t22s_rssi_t rssi;
-  int8_t ret;
+  int8_t ret, rep = 4;
   
   e22900t22s_set_ambient_noise( 1, &driver );
-  ret = e22900t22s_update_eeprom( &driver );
-  if( -1 == ret ){
-    printf("[%d] ", getpid( ));
-    perror("Updating the EEPROM");
-    return -1;
-  }
+  do{ 
+    ret = e22900t22s_update_eeprom( &driver );
+    if( -1 == ret ){
+      printf("[%d] ", getpid( ));
+      perror("Updating the EEPROM");
+      rep--;
+    }
 
-  ret = e22900t22s_get_rssi( &rssi, &driver );
-  if( -1 == ret ){
-    printf("[%d] ", getpid( ));
-    perror("e22900t22s_get_rssi");
-  }
-  else{
-    printf("[%d][%s] Past: %3.2f [dBm], Current: %3.2f [dBm]\n", getpid( ), gettime( ), rssi.past, rssi.current );
-  }
+    if( !rep )
+      return -1;
+  } while( 0 != ret );
+
+  rep = 4;
+  do{ 
+    ret = e22900t22s_get_rssi( &rssi, &driver );
+    if( -1 == ret ){
+      printf("[%d] ", getpid( ));
+      perror("e22900t22s_get_rssi");
+      rep --;
+    }
+    else{
+      printf("[%d][%s] Past: %3.2f [dBm], Current: %3.2f [dBm]\n", getpid( ), gettime( ), rssi.past, rssi.current );
+    }
+
+    if( !rep )
+      return -1;
+  } while( 0 != ret );
 
   
   e22900t22s_set_ambient_noise( 0, &driver );
-  ret = e22900t22s_update_eeprom( &driver );
-  if( -1 == ret ){
-    printf("[%d] ", getpid( ));
-    perror("Updating the EEPROM");
-    return -1;
-  }
+
+  rep = 4;
+  do{
+    ret = e22900t22s_update_eeprom( &driver );
+    if( -1 == ret ){
+      printf("[%d] ", getpid( ));
+      perror("Updating the EEPROM");
+      rep --;
+    }
+
+    if( !rep )
+      return -1;
+  } while( 0 != ret );
     
   mixip_continue( flow );
   return 0; 
