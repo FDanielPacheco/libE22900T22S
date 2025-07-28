@@ -2,12 +2,15 @@
 #include <time.h>
 #include <unistd.h>
 #include <string.h>
+#include <sys/mman.h>
+#include <errno.h>
 
 #include <e22900t22s/core.h>
 #include <e22900t22s/metrics.h>
 #include <e22900t22s/mixip.h>
 
-e22900t22s_t driver;
+e22900t22s_t      driver;
+e22900t22s_log_t  * logs; 
 
 /**************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
 const char *
@@ -107,7 +110,6 @@ dsetup( serial_manager_t * serial, const char * name ){
   if( -1 == ret ){
     printf("[%d] ", getpid( ));
     perror("Set the pinout");
-    e22900t22s_gpio_close( &driver );
     return -1;
   }
     
@@ -115,7 +117,6 @@ dsetup( serial_manager_t * serial, const char * name ){
   if( -1 == ret ){
     printf("[%d] ", getpid( ));
     perror("Set the EEPROM configuration");
-    e22900t22s_gpio_close( &driver );
     return -1;
   }
 
@@ -123,7 +124,6 @@ dsetup( serial_manager_t * serial, const char * name ){
   if( -1 == ret ){
     printf("[%d] ", getpid( ));
     perror("Updating the EEPROM");
-    e22900t22s_gpio_close( &driver );
     return -1;
   }
 
@@ -131,12 +131,28 @@ dsetup( serial_manager_t * serial, const char * name ){
   if( -1 == ret ){
     printf("[%d] ", getpid( ));
     perror("Retriving the EEPROM");
-    e22900t22s_gpio_close( &driver );
     return -1;
   }
 
   e22900t22s_print_config( 1, &driver );
   printf("[%d] Device configured...\n", getpid( ) );
+
+  logs = (e22900t22s_log_t *) mmap( NULL, sizeof( e22900t22s_log_t ), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0 );
+  if( MAP_FAILED == logs ){
+    printf("[%d] ", getpid( ));
+    perror("Initializing logs");
+    return -1;  
+  }
+  memset( logs, 0, sizeof( e22900t22s_log_t ) );
+
+  if( 0 == (logs->No = e22900t22s_get_noise_rssi( &driver, 1 ) ) ){
+    if( ECANCELED == errno ){
+      printf("[%d] ", getpid( ));
+      perror("e22900t22s_get_noise_rssi");
+      return -1;        
+    }
+  }
+  printf("[%d][%s] Noise floor: %3.2f [dBm]\n", getpid( ), gettime( ), logs->No );    
 
   return 0; 
 }
@@ -150,71 +166,8 @@ dloop( flow_t * flow ){
   sleep( 10 );
  
   /*
-  mixip_halt( flow );
-  
-  e22900t22s_rssi_t rssi;
-  int8_t ret, rep = 4;
-  
-  e22900t22s_set_ambient_noise( 1, &driver );
-  do{ 
-    ret = e22900t22s_update_eeprom( &driver );
-    if( -1 == ret ){
-      printf("[%d] ", getpid( ));
-      perror("Updating the EEPROM");
-      rep--;
-
-      serial_set_line_state( SERIAL_DTR, 0, &driver.serial->sr );
-      usleep( 5000 );
-      serial_set_line_state( SERIAL_DTR, 1, &driver.serial->sr );
-      usleep( 5000 );
-    }
-
-    if( !rep )
-      return -1;
-  } while( 0 != ret );
-
-  rep = 4;
-  do{ 
-    ret = e22900t22s_get_rssi( &rssi, &driver );
-    if( -1 == ret ){
-      printf("[%d] ", getpid( ));
-      perror("e22900t22s_get_rssi");
-      rep --;
-
-      serial_set_line_state( SERIAL_DTR, 0, &driver.serial->sr );
-      usleep( 5000 );
-      serial_set_line_state( SERIAL_DTR, 1, &driver.serial->sr );
-      usleep( 5000 );
-    }
-    else{
-      printf("[%d][%s] Past: %3.2f [dBm], Current: %3.2f [dBm]\n", getpid( ), gettime( ), rssi.past, rssi.current );
-    }
-
-    if( !rep )
-      return -1;
-  } while( 0 != ret );
-
-  
-  e22900t22s_set_ambient_noise( 0, &driver );
-
-  rep = 4;
-  do{
-    ret = e22900t22s_update_eeprom( &driver );
-    if( -1 == ret ){
-      printf("[%d] ", getpid( ));
-      perror("Updating the EEPROM");
-      rep --;
-
-      serial_set_line_state( SERIAL_DTR, 0, &driver.serial->sr );
-      usleep( 5000 );
-      serial_set_line_state( SERIAL_DTR, 1, &driver.serial->sr );
-      usleep( 5000 );
-    }
-
-    if( !rep )
-      return -1;
-  } while( 0 != ret );
-    
+  mixip_halt( flow );  
+  printf("[%d][%s] Past: %3.2f [dBm], Current: %3.2f [dBm]\n", getpid( ), gettime( ), rssi.past, rssi.current );    
   mixip_continue( flow );
   */
   return 0; 
@@ -223,13 +176,47 @@ dloop( flow_t * flow ){
 /**************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
 int 
 dread( buffer_t * buf ){
+  // Clear the previous samples
+  memset( logs->sample, 0, sizeof( e22900t22s_rx_metric_t ) * NSEG_MAX );
+  logs->n_samples = 0;
+
+  // If first is set it means the previous buffer had the last byte being EOF, so now the first byte of buf->data is 100% the RSSI  
+  if( logs->tmp.first )
+    logs->sample[ logs->n_samples++ ].Pr = e22900t22s_get_signal_rssi( buf->data[0] );
   
+  if( -1 == e22900t22s_identify_segments( buf->data, buf->len, &logs->tmp ) ){
+    printf("[%d] ", getpid( ));
+    perror("e22900t22s_identify_segments");
+    return -1;      
+  }
+
+  logs->n_received += logs->tmp.length;
+  uint8_t n = logs->tmp.length;
+  if( logs->tmp.first )
+    n --;
+
+  for( uint8_t i = 0 ; i < n ; ++i ){
+    if( logs->tmp.segment->end + 1 < buf->len )
+      logs->sample[ logs->n_samples ++ ].Pr = e22900t22s_get_signal_rssi( buf->data[ logs->tmp.segment->end + 1 ] );
+    else
+      printf("[%d] sample indicates the RSSI outside the buffer's available space\n", getpid( ));
+  }
+
+  for( uint8_t i = 0 ; i < logs->n_samples ; ++i )
+    logs->sample[ i ].SNR = logs->sample[ i ].Pr / logs->No;
+
+  for( uint8_t i = 0 ; i < logs->n_samples ; ++i )
+    printf("[%d][%s][sample: %d] Pr: %3.2f [dBm], No: %3.2f [dBm], SNR: %3.2f\n", getpid( ), gettime( ), i, logs->sample[ i ].Pr, logs->No ,logs->sample[ i ].SNR  );          
+  printf("[%d][%s] Received: %d (#)\n", getpid( ), gettime( ), logs->n_received );        
+
   return 0; 
 }
  
 /**************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
 int 
 dwrite( buffer_t * buf ){
+  printf("[%d][%s] Sent: %d (#)\n", getpid( ), gettime( ), logs->n_sent );        
+
   if( -1 == e22900t22s_while_busy( 100, &driver ) ){
     perror("e22900t22s_while_busy");
     return -1;
