@@ -179,10 +179,15 @@ dread( buffer_t * buf ){
   // Clear the previous samples
   memset( logs->sample, 0, sizeof( e22900t22s_rx_metric_t ) * NSEG_MAX );
   logs->n_samples = 0;
+  uint8_t extra_sample = 0;
 
   // If first is set it means the previous buffer had the last byte being EOF, so now the first byte of buf->data is 100% the RSSI  
-  if( logs->tmp.first )
-    logs->sample[ logs->n_samples++ ].Pr = e22900t22s_get_signal_rssi( buf->data[0] );
+  if( logs->tmp.first ){
+    logs->sample[0].Pr = e22900t22s_get_signal_rssi( buf->data[0] );
+    logs->sample[0].SNR = logs->sample[0].Pr / logs->No;
+    extra_sample = 1;
+    printf("[%d][%s] Pr: %3.2f [dBm], No: %3.2f [dBm], SNR: %3.2f\n", getpid( ), gettime( ), logs->sample[0].Pr, logs->No ,logs->sample[0].SNR  );          
+  }
   
   if( -1 == e22900t22s_identify_segments( buf->data, buf->len, &logs->tmp ) ){
     printf("[%d] ", getpid( ));
@@ -190,24 +195,26 @@ dread( buffer_t * buf ){
     return -1;      
   }
 
-  logs->n_received += logs->tmp.length;
-  uint8_t n = logs->tmp.length;
-  if( logs->tmp.first )
-    n --;
-
-  for( uint8_t i = 0 ; i < n ; ++i ){
-    if( logs->tmp.segment->end + 1 < buf->len )
-      logs->sample[ logs->n_samples ++ ].Pr = e22900t22s_get_signal_rssi( buf->data[ logs->tmp.segment->end + 1 ] );
-    else
-      printf("[%d] sample indicates the RSSI outside the buffer's available space\n", getpid( ));
+  logs->n_received += logs->tmp.length + extra_sample;
+  uint8_t n = logs->tmp.length + extra_sample;
+  if( 0 < n ){
+    if( logs->tmp.first )
+      n --;
+  
+    for( uint8_t i = 0 ; i < n ; ++i ){
+      if( logs->tmp.segment->end + 1 < buf->len )
+        logs->sample[ i ].Pr = e22900t22s_get_signal_rssi( buf->data[ logs->tmp.segment->end + 1 ] );
+      else
+        printf("[%d] sample indicates the RSSI outside the buffer's available space\n", getpid( ));
+    }
+  
+    for( uint8_t i = 0 ; i < logs->n_samples ; ++i )
+      logs->sample[ i ].SNR = logs->sample[ i ].Pr / logs->No;
+  
+    for( uint8_t i = 0 ; i < logs->n_samples ; ++i )
+      printf("[%d][%s][sample: %d] Pr: %3.2f [dBm], No: %3.2f [dBm], SNR: %3.2f\n", getpid( ), gettime( ), i, logs->sample[ i ].Pr, logs->No ,logs->sample[ i ].SNR  );          
+    printf("[%d][%s] Received: %d (#)\n", getpid( ), gettime( ), logs->n_received );        
   }
-
-  for( uint8_t i = 0 ; i < logs->n_samples ; ++i )
-    logs->sample[ i ].SNR = logs->sample[ i ].Pr / logs->No;
-
-  for( uint8_t i = 0 ; i < logs->n_samples ; ++i )
-    printf("[%d][%s][sample: %d] Pr: %3.2f [dBm], No: %3.2f [dBm], SNR: %3.2f\n", getpid( ), gettime( ), i, logs->sample[ i ].Pr, logs->No ,logs->sample[ i ].SNR  );          
-  printf("[%d][%s] Received: %d (#)\n", getpid( ), gettime( ), logs->n_received );        
 
   return 0; 
 }
